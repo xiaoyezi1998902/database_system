@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Database</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">Mini Database</div>
+            <div class="schema">
+                <div class="schema-header">
+                    <span>数据库对象</span>
+                    <button id="refreshSchema" title="刷新">↻</button>
+                </div>
+                <ul id="tables"></ul>
+            </div>
+        </aside>
+        <main class="main">
+            <section class="editor-section">
+                <div class="toolbar">
+                    <button id="runBtn">执行 (Ctrl+Enter)</button>
+                    <button id="clearBtn">清空输出</button>
+                    <span class="tip">支持多语句，以分号分隔</span>
+                </div>
+                <textarea id="sqlEditor" spellcheck="false"
+                    placeholder="在此输入 SQL；示例：\nCREATE TABLE student(id INT, name TEXT);\nINSERT INTO student VALUES (1,'Alice');\nSELECT id,name FROM student;"></textarea>
+            </section>
+            <div class="resizer" id="verticalResizer" title="拖拽调整高度"></div>
+            <section class="result-section">
+                <div class="tabs">
+                    <button class="tab active" data-tab="rows">结果</button>
+                    <button class="tab" data-tab="tokens">Tokens</button>
+                    <button class="tab" data-tab="ast">AST</button>
+                    <button class="tab" data-tab="plan">Plan</button>
+                    <button class="tab" data-tab="raw">Raw</button>
+                </div>
+                <div class="panes">
+                    <div id="pane-rows" class="pane active">
+                        <table>
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <pre id="pane-tokens" class="pane"></pre>
+                    <pre id="pane-ast" class="pane"></pre>
+                    <pre id="pane-plan" class="pane"></pre>
+                    <pre id="pane-raw" class="pane"></pre>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="/app.js"></script>
+    <script>
+        // 尝试加载示例SQL
+        fetch('/schema').then(() => {
+            const el = document.getElementById('sqlEditor');
+            if (el && !el.value.trim()) {
+                el.value = "CREATE TABLE student(id INT, name TEXT);\nINSERT INTO student VALUES (1,'Alice');\nINSERT INTO student VALUES (2,'Bob');\nSELECT id,name FROM student;";
+            }
+        });
+    </script>
+</body>
+
+</html>

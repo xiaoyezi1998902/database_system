@@ -48,34 +48,58 @@ def run_sql(sql: str, catalog: SystemCatalog, executor: Executor):
     # 5. 执行引擎执行
     print("\n[执行结果]")
     result = executor.execute(plan)
-    if result is not None:
+    if isinstance(result, int):
+        print(f"{result} 行受影响")
+    elif isinstance(result, list):
         for row in result:
             print(row)
+    elif result is not None:
+        print(result)
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="简化数据库系统 CLI")
+    parser.add_argument("--file", dest="file", help="SQL 文件路径（可选）", default=None)
+    args = parser.parse_args()
+
     # === 初始化系统组件 ===
-    # 存储层
-    disk_manager = DiskManager("data.db")
+    disk_manager = DiskManager()
     buffer_manager = BufferManager(disk_manager)
+    catalog = SystemCatalog()
+    executor = Executor(catalog, buffer_manager, disk_manager)
 
-    # 系统目录（元信息表）
-    catalog = SystemCatalog(buffer_manager)
+    def split_sql(sql_text: str):
+        stmt = []
+        in_string = False
+        escape = False
+        for ch in sql_text:
+            stmt.append(ch)
+            if ch == "'" and not escape:
+                in_string = not in_string
+            escape = (ch == '\\' and not escape)
+            if ch == ';' and not in_string:
+                yield ''.join(stmt).strip()
+                stmt = []
+        tail = ''.join(stmt).strip()
+        if tail:
+            yield tail
 
-    # 执行引擎
-    executor = Executor(catalog, buffer_manager)
+    if args.file:
+        with open(args.file, 'r', encoding='utf-8') as f:
+            sql_text = f.read()
+        statements = list(split_sql(sql_text))
+    else:
+        statements = [
+            "CREATE TABLE student(id INT, name TEXT);",
+            "INSERT INTO student VALUES (1, 'Alice');",
+            "INSERT INTO student VALUES (2, 'Bob');",
+            "SELECT id, name FROM student;",
+            "DELETE FROM student WHERE id = 1;",
+            "SELECT id, name FROM student;",
+        ]
 
-    # === 测试 SQL 脚本 ===
-    sql_statements = [
-        "CREATE TABLE student(id INT, name TEXT);",
-        "INSERT INTO student VALUES (1, 'Alice');",
-        "INSERT INTO student VALUES (2, 'Bob');",
-        "SELECT id, name FROM student;",
-        "DELETE FROM student WHERE id = 1;",
-        "SELECT id, name FROM student;",
-    ]
-
-    for sql in sql_statements:
+    for sql in statements:
         try:
             run_sql(sql, catalog, executor)
         except Exception as e:
