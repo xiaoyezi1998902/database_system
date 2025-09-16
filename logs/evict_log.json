@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": 1757947552.2533288,
+    "table": "test_table",
+    "page_id": 0,
+    "dirty": true,
+    "reason": "capacity_exceeded"
+  },
+  {
+    "timestamp": 1757947552.3636928,
+    "table": "test_table",
+    "page_id": 1,
+    "dirty": true,
+    "reason": "capacity_exceeded"
+  }
+]

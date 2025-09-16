@@ -1,6 +1,6 @@
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, List
 
-from .operators import SeqScan, Filter, Project, Insert as OpInsert, CreateTable as OpCreateTable, Delete as OpDelete
+from .operators import SeqScan, Filter, Project, Insert as OpInsert, CreateTable as OpCreateTable, Delete as OpDelete, Update as OpUpdate, OrderBy, Join
 from .system_catalog import SystemCatalog
 from storage.disk_manager import DiskManager
 from storage.buffer_manager import BufferManager
@@ -25,15 +25,35 @@ class Executor:
 			tbl = self._table(plan.args['table'])
 			op = OpInsert(tbl, self.catalog, plan.args['table'], plan.args.get('columns'), plan.args['values'])
 			return op.execute()
-		if name == 'Delete':
+		if name == 'Update':
 			child = plan.children[0]
-			# Delete 作用表由其下游 SeqScan 提供
-			under = child
+			# 收集所有 Filter 谓词，并定位到下游 SeqScan
+			predicates: List[Dict[str, Any]] = []
+			node = child
+			while node.name == 'Filter':
+				predicates.append(node.args['predicate'])
+				node = node.children[0]
+			# Update 作用表由其下游 SeqScan 提供
+			under = node
 			while under.name != 'SeqScan':
 				under = under.children[0]
 			tbl = self._table(under.args['table'])
-			pred = child.args['predicate'] if child.name == 'Filter' else None
-			op = OpDelete(tbl, pred)
+			op = OpUpdate(tbl, plan.args['set_clause'], predicates)
+			return op.execute()
+		if name == 'Delete':
+			child = plan.children[0]
+			# 收集所有 Filter 谓词，并定位到下游 SeqScan
+			predicates: List[Dict[str, Any]] = []
+			node = child
+			while node.name == 'Filter':
+				predicates.append(node.args['predicate'])
+				node = node.children[0]
+			# Delete 作用表由其下游 SeqScan 提供
+			under = node
+			while under.name != 'SeqScan':
+				under = under.children[0]
+			tbl = self._table(under.args['table'])
+			op = OpDelete(tbl, predicates)
 			# 为一致性，Delete 直接在表上做标记删除
 			return op.execute()
 		# 其余（Select 管道）
@@ -51,6 +71,13 @@ class Executor:
 		if node.name == 'Project':
 			child = self._build_pipeline(node.children[0])
 			return Project(child, node.args['columns'])
+		if node.name == 'OrderBy':
+			child = self._build_pipeline(node.children[0])
+			return OrderBy(child, node.args['order_specs'])
+		if node.name == 'Join':
+			left_child = self._build_pipeline(node.children[0])
+			right_child = self._build_pipeline(node.children[1])
+			return Join(left_child, right_child, node.args['join_type'], node.args['on_condition'])
 		return None
 
 	def _materialize_child(self, node) -> Iterable[Dict[str, Any]]:

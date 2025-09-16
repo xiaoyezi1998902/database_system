@@ -42,3 +42,15 @@ class TableStorage:
 			count += page.mark_deleted(predicate)
 			self.buffer.mark_dirty(self.table_name, pid)
 		return count
+
+	def update_where(self, update_func, predicate) -> int:
+		count = 0
+		num_pages = self.disk.get_num_pages(self.table_name)
+		for pid in range(num_pages):
+			page = self.buffer.get_page(self.table_name, pid)
+			for r in page.rows:
+				if not r.get("__deleted__") and predicate(r):
+					update_func(r)
+					count += 1
+			self.buffer.mark_dirty(self.table_name, pid)
+		return count

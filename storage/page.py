@@ -63,4 +63,5 @@ class Page:
 	def iter_live_rows(self) -> Iterable[Dict[str, Any]]:
 		for r in self.rows:
 			if not r.get("__deleted__"):
-				yield r
+				# 返回row对象的深拷贝，避免引用共享问题
+				yield r.copy()

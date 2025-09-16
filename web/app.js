@@ -11,11 +11,24 @@
     tokens: $('#pane-tokens'),
     ast: $('#pane-ast'),
     plan: $('#pane-plan'),
+    stats: $('#pane-stats'),
     raw: $('#pane-raw'),
   };
   const tablesEl = $('#tables');
   const refreshSchemaBtn = $('#refreshSchema');
   const resizer = $('#verticalResizer');
+  const refreshStatsBtn = $('#refreshStats');
+  const resetStatsBtn = $('#resetStats');
+  const statsContent = $('#statsContent');
+  const lintPanel = document.getElementById('lintPanel');
+
+  // SQL关键词列表
+  const SQL_KEYWORDS = new Set([
+    'SELECT', 'FROM', 'WHERE', 'CREATE', 'TABLE', 'INSERT', 'INTO', 'VALUES', 'DELETE',
+    'UPDATE', 'SET', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'ORDER', 'BY',
+    'GROUP', 'HAVING', 'INT', 'TEXT', 'VARCHAR', 'AND', 'OR', 'NOT', 'NULL', 'IS',
+    'IN', 'BETWEEN', 'LIKE', 'EXISTS', 'UNION', 'DISTINCT', 'AS', 'ASC', 'DESC'
+  ]);
 
   function setActiveTab(name) {
     tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
@@ -54,9 +67,10 @@
         const e = r.error || {};
         const pos = (e.line && e.column) ? ` (行 ${e.line} 列 ${e.column})` : '';
         const type = e.errorType ? `[${e.errorType}] ` : '';
-        blocks.push({ type: 'text', text: `错误: ${type}${e.message || ''}${pos}` });
+        const expected = e.expected ? ` 期望: ${e.expected}` : '';
+        blocks.push({ type: 'text', text: `错误: ${type}${e.message || ''}${pos}${expected}` });
       } else {
-        blocks.push({ type: 'text', text: '完成' });
+        blocks.push({ type: 'text', text: `${r.resultType}` });
       }
     }
 
@@ -184,6 +198,179 @@
   });
 
   refreshSchema();
+
+  // SQL语法检查
+  function checkSQLSyntax(text) {
+    const errors = [];
+    const lines = text.split('\n');
+
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const line = lines[lineIdx];
+      const words = line.match(/\b[A-Za-z_]+\b/g) || [];
+
+      for (const word of words) {
+        const upperWord = word.toUpperCase();
+        if (!SQL_KEYWORDS.has(upperWord)) {
+          // 检查是否是拼写错误的关键词
+          const suggestions = findSuggestions(upperWord);
+          if (suggestions.length > 0) {
+            errors.push({
+              line: lineIdx + 1,
+              column: line.indexOf(word) + 1,
+              word: word,
+              suggestions: suggestions
+            });
+          }
+        }
+      }
+    }
+
+    return errors;
+  }
+
+  function findSuggestions(word) {
+    const suggestions = [];
+    for (const keyword of SQL_KEYWORDS) {
+      if (levenshteinDistance(word, keyword) <= 2) {
+        suggestions.push(keyword);
+      }
+    }
+    return suggestions.slice(0, 3); // 最多返回3个建议
+  }
+
+  function levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  }
+
+  function highlightErrors() {
+    const text = editor.value;
+    if (!text.trim()) {
+      if (lintPanel) {
+        lintPanel.style.display = 'none';
+        lintPanel.innerHTML = '';
+      }
+      return;
+    }
+
+    const errors = checkSQLSyntax(text);
+    console.log('检测到的错误:', errors); // 调试信息
+
+    if (errors.length > 0) {
+      if (lintPanel) {
+        lintPanel.style.display = 'block';
+        lintPanel.innerHTML = errors.map(e => {
+          const sug = (e.suggestions && e.suggestions.length) ? '，建议：' + e.suggestions.join(', ') : '';
+          return `<div class="lint-item">第${e.line}行 第${e.column}列：疑似关键词拼写错误 "${e.word}"${sug}</div>`;
+        }).join('');
+      }
+    } else {
+      if (lintPanel) {
+        lintPanel.style.display = 'none';
+        lintPanel.innerHTML = '';
+      }
+    }
+  }
+
+
+  // 为编辑器添加实时语法检查
+  editor.addEventListener('input', highlightErrors);
+  editor.addEventListener('blur', highlightErrors);
+  // 初始执行一次，确保面板可见
+  setTimeout(highlightErrors, 100); // 延迟执行，确保DOM完全加载
+
+  // 缓存统计功能
+  async function loadStats() {
+    try {
+      console.log('正在加载缓存统计...');
+      const data = await fetchJSON('/stats');
+      console.log('缓存统计数据:', data);
+      if (data.ok) {
+        renderStats(data.stats);
+      } else {
+        statsContent.innerHTML = `<div class="error">加载统计信息失败: ${data.error || '未知错误'}</div>`;
+      }
+    } catch (e) {
+      console.error('加载统计信息异常:', e);
+      statsContent.innerHTML = `<div class="error">加载统计信息失败: ${e.message}</div>`;
+    }
+  }
+
+  function renderStats(stats) {
+    const hitRate = (stats.hit_rate * 100).toFixed(2);
+    statsContent.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-title">缓存命中次数</div>
+        <div class="stat-value">${stats.hit_count}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">缓存未命中次数</div>
+        <div class="stat-value">${stats.miss_count}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">命中率</div>
+        <div class="stat-value">${hitRate}%</div>
+        <div class="stat-subtitle">${stats.hit_count}/${stats.hit_count + stats.miss_count}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">驱逐次数</div>
+        <div class="stat-value">${stats.evict_count}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">当前缓存大小</div>
+        <div class="stat-value">${stats.cache_size}</div>
+        <div class="stat-subtitle">/${stats.cache_capacity}</div>
+      </div>
+      <div class="evict-log">
+        <h4>最近驱逐记录</h4>
+        ${stats.evict_log.length > 0 ?
+        stats.evict_log.map(entry => `
+            <div class="evict-entry">
+              <span>${entry.table}.${entry.page_id}</span>
+              <span>${entry.dirty ? '脏页' : '干净页'} - ${entry.reason}</span>
+            </div>
+          `).join('') :
+        '<div class="stat-subtitle">暂无驱逐记录</div>'
+      }
+      </div>
+    `;
+  }
+
+  async function resetStats() {
+    try {
+      const data = await fetchJSON('/stats/reset', { method: 'POST' });
+      if (data.ok) {
+        await loadStats();
+      }
+    } catch (e) {
+      console.error('重置统计失败:', e);
+    }
+  }
+
+  refreshStatsBtn.addEventListener('click', loadStats);
+  resetStatsBtn.addEventListener('click', resetStats);
+
+  // 页面加载时自动加载统计信息
+  setTimeout(loadStats, 200);
 
   // 垂直拖拽调整高度
   if (resizer) {

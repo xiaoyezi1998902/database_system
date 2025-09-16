@@ -1,0 +1,25 @@
+{
+  "hit_count": 317,
+  "miss_count": 7,
+  "hit_rate": 0.9783950617283951,
+  "evict_count": 2,
+  "cache_size": 2,
+  "cache_capacity": 64,
+  "evict_log": [
+    {
+      "timestamp": 1757947552.2533288,
+      "table": "test_table",
+      "page_id": 0,
+      "dirty": true,
+      "reason": "capacity_exceeded"
+    },
+    {
+      "timestamp": 1757947552.3636928,
+      "table": "test_table",
+      "page_id": 1,
+      "dirty": true,
+      "reason": "capacity_exceeded"
+    }
+  ],
+  "last_updated": 1758009441.3512545
+}

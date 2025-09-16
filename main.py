@@ -55,6 +55,9 @@ def run_sql(sql: str, catalog: SystemCatalog, executor: Executor):
             print(row)
     elif result is not None:
         print(result)
+    elif result is None:
+        table_name = plan.args['table']
+        print(f'{table_name} 表创建成功')
 
 
 def main():
@@ -66,7 +69,11 @@ def main():
     # === 初始化系统组件 ===
     disk_manager = DiskManager()
     buffer_manager = BufferManager(disk_manager)
-    catalog = SystemCatalog()
+
+    # 创建系统目录表的存储
+    from storage.table import TableStorage
+    catalog_storage = TableStorage("pg_catalog", disk_manager, buffer_manager)
+    catalog = SystemCatalog(catalog_storage)
     executor = Executor(catalog, buffer_manager, disk_manager)
 
     def split_sql(sql_text: str):
@@ -92,7 +99,7 @@ def main():
     else:
         statements = [
             "CREATE TABLE student(id INT, name TEXT);",
-            "INSERT INTO student VALUES (1, 'Alice');",
+            "INSERT INTO student(name, id) VALUES ('Alice', 1);",
             "INSERT INTO student VALUES (2, 'Bob');",
             "SELECT id, name FROM student;",
             "DELETE FROM student WHERE id = 1;",

@@ -29,6 +29,7 @@
                 </div>
                 <textarea id="sqlEditor" spellcheck="false"
                     placeholder="在此输入 SQL；示例：\nCREATE TABLE student(id INT, name TEXT);\nINSERT INTO student VALUES (1,'Alice');\nSELECT id,name FROM student;"></textarea>
+                <div id="lintPanel" class="lint-panel" style="display:none"></div>
             </section>
             <div class="resizer" id="verticalResizer" title="拖拽调整高度"></div>
             <section class="result-section">
@@ -37,6 +38,7 @@
                     <button class="tab" data-tab="tokens">Tokens</button>
                     <button class="tab" data-tab="ast">AST</button>
                     <button class="tab" data-tab="plan">Plan</button>
+                    <button class="tab" data-tab="stats">缓存统计</button>
                     <button class="tab" data-tab="raw">Raw</button>
                 </div>
                 <div class="panes">
@@ -49,6 +51,16 @@
                     <pre id="pane-tokens" class="pane"></pre>
                     <pre id="pane-ast" class="pane"></pre>
                     <pre id="pane-plan" class="pane"></pre>
+                    <div id="pane-stats" class="pane">
+                        <div class="stats-container">
+                            <div class="stats-header">
+                                <h3>缓存统计信息</h3>
+                                <button id="refreshStats" class="refresh-btn">刷新</button>
+                                <button id="resetStats" class="reset-btn">重置</button>
+                            </div>
+                            <div id="statsContent" class="stats-content"></div>
+                        </div>
+                    </div>
                     <pre id="pane-raw" class="pane"></pre>
                 </div>
             </section>
@@ -60,7 +72,7 @@
         fetch('/schema').then(() => {
             const el = document.getElementById('sqlEditor');
             if (el && !el.value.trim()) {
-                el.value = "CREATE TABLE student(id INT, name TEXT);\nINSERT INTO student VALUES (1,'Alice');\nINSERT INTO student VALUES (2,'Bob');\nSELECT id,name FROM student;";
+                el.value = "CREATE TABLE student(id INT, name TEXT);\nINSERT INTO student VALUES (1,'Alice');\nINSERT INTO student VALUES (2,'Bob');\nSELECT id,name FROM student;\n\n-- 测试拼写错误:\nSELCT * FROM student;\nUPDAT student SET name='Test' WHERE id=1;";
             }
         });
     </script>

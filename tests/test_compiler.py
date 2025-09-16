@@ -5,6 +5,7 @@ from compiler.planner import Planner
 from execution.system_catalog import SystemCatalog
 
 
+# pytest -v ./tests/test_compiler.py
 def compile_one(sql: str):
 	lexer = Lexer(sql)
 	tokens = lexer.tokenize()
@@ -18,6 +19,8 @@ def compile_one(sql: str):
 	else:
 		# 为非建表语句准备一个测试表
 		catalog.create_table('student', [{"name": "id", "type": "INT"}, {"name": "name", "type": "TEXT"}])
+	print("所有表：", catalog.tables)
+
 	analyzer.check(ast)
 	planner = Planner()
 	plan = planner.create_plan(ast)
@@ -39,3 +42,7 @@ def test_insert_compile():
 def test_select_compile():
 	_, ast, plan = compile_one("SELECT id,name FROM student WHERE id >= 1;")
 	assert 'SeqScan' in repr(plan)
+
+
+if __name__ == "__main__":
+	test_insert_compile()

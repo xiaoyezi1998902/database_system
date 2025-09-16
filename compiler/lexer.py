@@ -23,11 +23,40 @@ KEYWORDS = {
 	"INTO",
 	"VALUES",
 	"DELETE",
+	"UPDATE",
+	"SET",
+	"JOIN",
+	"LEFT",
+	"RIGHT",
+	"INNER",
+	"OUTER",
+	"ON",
+	"ORDER",
+	"BY",
+	"GROUP",
+	"HAVING",
+	"ASC",
+	"DESC",
 	"INT",
 	"TEXT",
 	"VARCHAR",
 	"AND",
 	"OR",
+	"NOT",
+	"NULL",
+	"IS",
+	"IN",
+	"BETWEEN",
+	"LIKE",
+	"EXISTS",
+	"UNION",
+	"DISTINCT",
+	"AS",
+	"COUNT",
+	"SUM",
+	"AVG",
+	"MIN",
+	"MAX",
 }
 
 
@@ -43,7 +72,11 @@ class Token:
 
 
 class LexError(Exception):
-	pass
+	def __init__(self, message: str, line: int = None, column: int = None, expected: str = None):
+		super().__init__(message)
+		self.line = line
+		self.column = column
+		self.expected = expected
 
 
 class Lexer:
@@ -92,7 +125,7 @@ class Lexer:
 			if c in " \t\r\n":
 				self._advance()
 				continue
-			# line comment -- ...
+			# line comment -- 单行注释开头
 			if c == '-' and self._lookahead(1) == '-':
 				while self._peek() not in ('\n', '\0'):
 					self._advance()
@@ -137,7 +170,7 @@ class Lexer:
 			return Token(TokenType.DELIMITER, ch, start_line, start_col)
 		if ch in ('=', '+', '-', '/', '%'):
 			return Token(TokenType.OPERATOR, ch, start_line, start_col)
-		if ch in ('<', '>','!'):
+		if ch in ('<', '>', '!'):
 			# <=, >=, <>, !=
 			if self._peek() == '=':
 				op = ch + self._advance()
@@ -147,10 +180,10 @@ class Lexer:
 				return Token(TokenType.OPERATOR, op, start_line, start_col)
 			# single < or > or ! (error for ! alone)
 			if ch == '!':
-				raise LexError(f"非法字符 '!' 于行 {start_line} 列 {start_col}; 期望 '!='")
+				raise LexError(f"非法字符 '!' 于行 {start_line} 列 {start_col}; 期望 '!='", start_line, start_col, "!=")
 			return Token(TokenType.OPERATOR, ch, start_line, start_col)
 
-		raise LexError(f"非法字符 {ch!r} 于行 {start_line} 列 {start_col}")
+		raise LexError(f"非法字符 {ch!r} 于行 {start_line} 列 {start_col}", start_line, start_col)
 
 	def _read_identifier(self) -> str:
 		chars: List[str] = []
@@ -178,7 +211,7 @@ class Lexer:
 		while True:
 			c = self._peek()
 			if c == "\0":
-				raise LexError(f"未闭合字符串 于行 {start_line} 列 {start_col}")
+				raise LexError(f"未闭合字符串 于行 {start_line} 列 {start_col}", start_line, start_col, "'")
 			if c == "'":
 				self._advance()
 				break
