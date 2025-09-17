@@ -80,11 +80,11 @@ class LexError(Exception):
 
 
 class Lexer:
-	def __init__(self, source: str):
+	def __init__(self, source: str, line=1):
 		self.source = source
 		self.length = len(source)
 		self.index = 0
-		self.line = 1
+		self.line = line
 		self.col = 1
 
 	def tokenize(self) -> List[Token]:
@@ -107,7 +107,6 @@ class Lexer:
 			return c
 		self.index += 1
 		if c == "\n":
-			self.line += 1
 			self.col = 1
 		else:
 			self.col += 1

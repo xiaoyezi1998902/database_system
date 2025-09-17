@@ -77,7 +77,8 @@ class Executor:
 		if node.name == 'Join':
 			left_child = self._build_pipeline(node.children[0])
 			right_child = self._build_pipeline(node.children[1])
-			return Join(left_child, right_child, node.args['join_type'], node.args['on_condition'])
+			return Join(left_child, right_child, node.args['join_type'], node.args['on_condition'], 
+						node.args.get('left_table_alias'), node.args.get('right_table_alias'))
 		return None
 
 	def _materialize_child(self, node) -> Iterable[Dict[str, Any]]:

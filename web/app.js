@@ -50,11 +50,9 @@
 
   function renderRows(results) {
     const pane = panes.rows;
-    const table = pane.querySelector('table');
-    const thead = table.querySelector('thead');
-    const tbody = table.querySelector('tbody');
-    thead.innerHTML = '';
-    tbody.innerHTML = '';
+
+    // 清空整个结果面板
+    pane.innerHTML = '';
 
     // 合并所有结果为一个平面展示（逐语句块依次渲染）
     const blocks = [];
@@ -76,37 +74,52 @@
 
     if (blocks.length === 0) return;
 
-    // 找到首个行结果作为表头参考
-    const firstRows = (blocks.find(b => b.type === 'rows') || {}).rows || [];
-    const columns = firstRows.length ? Object.keys(firstRows[0]) : [];
-    if (columns.length) {
-      const tr = document.createElement('tr');
-      for (const c of columns) {
-        const th = document.createElement('th');
-        th.textContent = c;
-        tr.appendChild(th);
-      }
-      thead.appendChild(tr);
-    }
-
+    // 为每个结果块创建独立的容器
     for (const b of blocks) {
       if (b.type === 'rows') {
-        for (const row of b.rows) {
+        // 为每个SELECT结果创建独立的表格容器
+        const columns = b.rows.length ? Object.keys(b.rows[0]) : [];
+        if (columns.length) {
+          // 创建结果块容器
+          const resultBlock = document.createElement('div');
+          resultBlock.className = 'result-block';
+
+          // 创建表格
+          const table = document.createElement('table');
+
+          // 创建表头
+          const thead = document.createElement('thead');
           const tr = document.createElement('tr');
           for (const c of columns) {
-            const td = document.createElement('td');
-            td.textContent = row[c];
-            tr.appendChild(td);
+            const th = document.createElement('th');
+            th.textContent = c;
+            tr.appendChild(th);
           }
-          tbody.appendChild(tr);
+          thead.appendChild(tr);
+          table.appendChild(thead);
+
+          // 创建表体
+          const tbody = document.createElement('tbody');
+          for (const row of b.rows) {
+            const tr = document.createElement('tr');
+            for (const c of columns) {
+              const td = document.createElement('td');
+              td.textContent = row[c];
+              tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+          }
+          table.appendChild(tbody);
+
+          resultBlock.appendChild(table);
+          pane.appendChild(resultBlock);
         }
       } else if (b.type === 'text') {
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = Math.max(1, columns.length);
-        td.textContent = b.text;
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        // 为文本结果创建独立的容器
+        const resultBlock = document.createElement('div');
+        resultBlock.className = 'result-block text-result';
+        resultBlock.textContent = b.text;
+        pane.appendChild(resultBlock);
       }
     }
   }
@@ -119,11 +132,32 @@
   }
 
   async function runSQL() {
-    const sql = editor.value;
+    // 保存当前的选中状态
+    const selectionStart = editor.selectionStart;
+    const selectionEnd = editor.selectionEnd;
+
+    // 获取选中的文本，如果没有选中则使用全部文本
+    const selectedText = editor.value.substring(selectionStart, selectionEnd);
+    const sql = selectedText.trim() || editor.value;
+
+    // 计算选中文本的起始行号
+    let startLineNum = 1;
+    if (selectedText.trim()) {
+      // 计算选中文本在原始文本中的起始行号
+      const textBeforeSelection = editor.value.substring(0, editor.selectionStart);
+      startLineNum = textBeforeSelection.split('\n').length;
+    }
+
     if (!sql.trim()) return;
     setActiveTab('rows');
     try {
-      const resp = await fetchJSON('/execute', { method: 'POST', body: JSON.stringify({ sql }) });
+      const resp = await fetchJSON('/execute', {
+        method: 'POST',
+        body: JSON.stringify({
+          sql: sql,
+          startLineNum: startLineNum
+        })
+      });
       if (!resp.ok && resp.error) throw new Error(resp.error);
       const results = resp.results || [];
       renderRows(results);
@@ -135,6 +169,10 @@
       panes.ast.textContent = '';
       panes.plan.textContent = '';
       panes.raw.textContent = '';
+    } finally {
+      // 恢复选中状态
+      editor.setSelectionRange(selectionStart, selectionEnd);
+      editor.focus(); // 确保编辑器重新获得焦点
     }
   }
 

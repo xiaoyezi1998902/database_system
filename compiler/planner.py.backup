@@ -82,8 +82,9 @@ class Planner:
 			if join.table_alias:
 				table_aliases[join.table_alias] = join.table_name  # 别名映射到真实表名
 			
-			# 谓词下推：只将WHERE条件中涉及JOIN表的谓词下推
+			# 谓词下推：将JOIN条件下推到扫描节点
 			join_predicates = []
+			join_predicates.append(join.on_condition)
 			
 			# 将WHERE条件中涉及JOIN表的谓词下推
 			for pred in where_predicates[:]:

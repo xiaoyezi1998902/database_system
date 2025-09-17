@@ -1,9 +1,9 @@
 {
-  "hit_count": 317,
-  "miss_count": 7,
-  "hit_rate": 0.9783950617283951,
+  "hit_count": 3775,
+  "miss_count": 37,
+  "hit_rate": 0.9902938090241343,
   "evict_count": 2,
-  "cache_size": 2,
+  "cache_size": 4,
   "cache_capacity": 64,
   "evict_log": [
     {
@@ -21,5 +21,5 @@
       "reason": "capacity_exceeded"
     }
   ],
-  "last_updated": 1758009441.3512545
+  "last_updated": 1758078779.0268922
 }

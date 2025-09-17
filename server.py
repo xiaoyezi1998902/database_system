@@ -32,11 +32,12 @@ catalog = SystemCatalog(catalog_storage)
 executor = Executor(catalog, buffer_manager, disk_manager)
 
 
-def split_sql(sql_text: str) -> List[str]:
+def split_sql(sql_text: str, line_offset: int = 0) -> List[str]:
     stmt = []
     in_string = False
     escape = False
-    line_num = 1
+    line_num = 1 + line_offset  # 添加行号偏移
+    stmt_start_line = 1 + line_offset  # 记录当前语句的起始行号
 
     for ch in sql_text:
         stmt.append(ch)
@@ -45,19 +46,22 @@ def split_sql(sql_text: str) -> List[str]:
         escape = (ch == '\\' and not escape)
         if ch == '\n':
             line_num += 1
+            # 修复：每遇到换行符，都更新stmt_start_line为当前行号
+            stmt_start_line = line_num
         if ch == ';' and not in_string:
             sql = ''.join(stmt).strip()
             if sql:
                 # 为每个语句添加行数信息（用于错误定位）
-                yield sql
+                yield sql, stmt_start_line
             stmt = []
+
     tail = ''.join(stmt).strip()
     if tail:
-        yield tail
+        yield tail, stmt_start_line
 
 
-def compile_and_execute(sql: str) -> Dict[str, Any]:
-    lexer = Lexer(sql)
+def compile_and_execute(sql: str, line_num: int) -> Dict[str, Any]:
+    lexer = Lexer(sql, line_num)
     tokens = lexer.tokenize()
     parser = Parser(tokens)
     ast = parser.parse()
@@ -120,14 +124,15 @@ def format_error(err: Exception) -> Dict[str, Any]:
 def http_execute():
     data = request.get_json(force=True, silent=True) or {}
     sql = data.get("sql", "")
+    start_line_num = data.get('startLineNum', 1)
     if not isinstance(sql, str) or not sql.strip():
         return jsonify({"error": "SQL 不能为空"}), 400
     
     results: List[Dict[str, Any]] = []
     
-    for stmt in split_sql(sql):
+    for stmt in split_sql(sql, start_line_num - 1):
         try:
-            results.append(compile_and_execute(stmt))
+            results.append(compile_and_execute(stmt[0], stmt[1]))
         except (LexError, ParseError, SemanticError, Exception) as e:
             results.append({
                 "error": format_error(e),

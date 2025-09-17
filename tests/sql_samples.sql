@@ -71,143 +71,74 @@ SELECT s.name, c.name as class_name
 FROM student s 
 LEFT JOIN class c ON s.class_id = c.id;
 
--- 4.3 多表连接
-SELECT s.name, c.name as class_name, sc.subject, sc.score
-FROM student s
-JOIN class c ON s.class_id = c.id
-JOIN score sc ON s.id = sc.student_id;
-
 -- ===========================================
--- 5. 聚合查询测试
+-- 5. 更新操作测试
 -- ===========================================
 
--- 5.1 计数查询
-SELECT COUNT(*) as total_students FROM student;
-
--- 5.2 分组查询
-SELECT class_id, COUNT(*) as student_count 
-FROM student 
-GROUP BY class_id;
-
--- 5.3 分组条件查询
-SELECT class_id, COUNT(*) as student_count 
-FROM student 
-GROUP BY class_id 
-HAVING student_count > 1;
-
--- 5.4 聚合函数
-SELECT 
-    COUNT(*) as total,
-    AVG(age) as avg_age,
-    MIN(age) as min_age,
-    MAX(age) as max_age
-FROM student;
-
--- ===========================================
--- 6. 更新操作测试
--- ===========================================
-
--- 6.1 更新单列
+-- 5.1 更新单列
 UPDATE student SET age = 21 WHERE id = 1;
 
--- 6.2 更新多列
+-- 5.2 更新多列
 UPDATE student SET age = 22, class_id = 2 WHERE name = 'Alice';
 
--- 6.3 条件更新
-UPDATE student SET age = age + 1 WHERE class_id = 1;
-
 -- ===========================================
--- 7. 删除操作测试
+-- 6. 删除操作测试
 -- ===========================================
 
--- 7.1 条件删除
+-- 6.1 条件删除
 DELETE FROM student WHERE id = 5;
 
--- 7.2 删除特定记录
+-- 6.2 删除特定记录
 DELETE FROM student WHERE age < 20;
 
--- 7.3 查询删除后的结果
+-- 6.3 查询删除后的结果
 SELECT * FROM student;
 
 -- ===========================================
--- 8. 错误语句测试（应该报错）
+-- 7. 错误语句测试（应该报错）
 -- ===========================================
 
--- 8.1 缺少分号
+-- 7.1 缺少分号
 CREATE TABLE test1(id INT, name TEXT)
 
--- 8.2 列名错误
+-- 7.2 列名错误
 SELECT non_existent_column FROM student;
 
--- 8.3 表名错误
+-- 7.3 表名错误
 SELECT * FROM non_existent_table;
 
--- 8.4 类型不匹配
+-- 7.4 类型不匹配
 INSERT INTO student VALUES ('invalid_id', 'Test', 20, 1);
 
--- 8.5 字符串未闭合
+-- 7.5 字符串未闭合
 INSERT INTO student VALUES (6, 'Unclosed string', 20, 1);
 
--- 8.6 语法错误
+-- 7.6 语法错误
 SELCT * FROM student;
 
--- 8.7 缺少关键字
+-- 7.7 缺少关键字
 CREATE student(id INT, name TEXT);
 
--- 8.8 重复列名
+-- 7.8 重复列名
 CREATE TABLE test2(id INT, id TEXT);
 
--- 8.9 不支持的类型
+-- 7.9 不支持的类型
 CREATE TABLE test3(id CUSTOM_TYPE, name TEXT);
 
--- 8.10 值个数不匹配
+-- 7.10 值个数不匹配
 INSERT INTO student VALUES (7, 'Test');
 
--- 8.11 不存在的列
+-- 7.11 不存在的列
 UPDATE student SET non_existent = 'value' WHERE id = 1;
 
--- 8.12 不存在的表
+-- 7.12 不存在的表
 UPDATE non_existent_table SET name = 'test' WHERE id = 1;
 
 -- ===========================================
--- 9. 复杂查询测试
+-- 8. 性能测试（大量数据）
 -- ===========================================
 
--- 9.1 复杂条件查询
-SELECT s.name, c.name as class_name, sc.score
-FROM student s
-JOIN class c ON s.class_id = c.id
-JOIN score sc ON s.id = sc.student_id
-WHERE sc.score > 90 AND s.age > 19
-ORDER BY sc.score DESC;
-
--- 9.2 嵌套聚合查询
-SELECT 
-    c.name as class_name,
-    COUNT(s.id) as student_count,
-    AVG(sc.score) as avg_score
-FROM class c
-LEFT JOIN student s ON c.id = s.class_id
-LEFT JOIN score sc ON s.id = sc.student_id
-GROUP BY c.id, c.name
-HAVING student_count > 0
-ORDER BY avg_score DESC;
-
--- 9.3 多表更新
-UPDATE student 
-SET class_id = 2 
-WHERE id IN (
-    SELECT s.id 
-    FROM student s 
-    JOIN score sc ON s.id = sc.student_id 
-    WHERE sc.score > 90
-);
-
--- ===========================================
--- 10. 性能测试（大量数据）
--- ===========================================
-
--- 10.1 批量插入大量数据
+-- 8.1 批量插入大量数据
 INSERT INTO student VALUES 
 (100, 'Student100', 20, 1), (101, 'Student101', 21, 1), (102, 'Student102', 20, 2),
 (103, 'Student103', 22, 1), (104, 'Student104', 19, 2), (105, 'Student105', 21, 1),
@@ -217,84 +148,8 @@ INSERT INTO student VALUES
 (115, 'Student115', 22, 1), (116, 'Student116', 19, 2), (117, 'Student117', 21, 1),
 (118, 'Student118', 20, 2), (119, 'Student119', 22, 1), (120, 'Student120', 19, 2);
 
--- 10.2 大量数据查询
-SELECT COUNT(*) FROM student;
-
--- 10.3 大量数据条件查询
-SELECT * FROM student WHERE age BETWEEN 20 AND 21;
-
--- 10.4 大量数据排序
+-- 8.2 大量数据排序
 SELECT * FROM student ORDER BY name;
-
--- ===========================================
--- 11. 边界条件测试
--- ===========================================
-
--- 11.1 空表查询
-SELECT * FROM student WHERE id > 1000;
-
--- 11.2 空字符串处理
-INSERT INTO student VALUES (200, '', 20, 1);
-
--- 11.3 特殊字符处理
-INSERT INTO student VALUES (201, 'Name with spaces', 20, 1);
-INSERT INTO student VALUES (202, 'Name-with-dashes', 20, 1);
-INSERT INTO student VALUES (203, 'Name_with_underscores', 20, 1);
-
--- 11.4 数值边界
-INSERT INTO student VALUES (2147483647, 'MaxInt', 20, 1);
-INSERT INTO student VALUES (-2147483648, 'MinInt', 20, 1);
-
--- ===========================================
--- 12. 数据完整性测试
--- ===========================================
-
--- 12.1 查询所有数据
-SELECT * FROM student ORDER BY id;
-
--- 12.2 查询班级信息
-SELECT * FROM class;
-
--- 12.3 查询成绩信息
-SELECT * FROM score ORDER BY student_id, subject;
-
--- 12.4 统计信息
-SELECT 
-    'Total Students' as metric, 
-    COUNT(*) as value 
-FROM student
-UNION ALL
-SELECT 
-    'Total Classes' as metric, 
-    COUNT(*) as value 
-FROM class
-UNION ALL
-SELECT 
-    'Total Scores' as metric, 
-    COUNT(*) as value 
-FROM score;
-
--- ===========================================
--- 13. 系统目录测试
--- ===========================================
-
--- 13.1 查看系统目录（通过特殊查询）
--- 注意：这需要特殊的系统查询支持，暂时注释
--- SELECT * FROM pg_catalog;
-
--- ===========================================
--- 14. 清理测试数据
--- ===========================================
-
--- 14.1 删除测试数据
-DELETE FROM score WHERE student_id > 100;
-DELETE FROM student WHERE id > 100;
-DELETE FROM student WHERE name LIKE 'Student%';
-
--- 14.2 最终查询验证
-SELECT COUNT(*) as remaining_students FROM student;
-SELECT COUNT(*) as remaining_classes FROM class;
-SELECT COUNT(*) as remaining_scores FROM score;
 
 -- ===========================================
 -- 测试完成

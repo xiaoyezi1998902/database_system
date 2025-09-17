@@ -185,7 +185,8 @@ class SemanticAnalyzer:
 		if isinstance(table_aliases_or_column_set, dict):
 			# 多表查询，使用table_aliases
 			self._check_column_reference(comp.left, table_aliases_or_column_set)
-			if isinstance(comp.right, str):
+			# 检查right是否为列引用（而不是常量）
+			if isinstance(comp.right, str) and self._is_column_reference(comp.right):
 				self._check_column_reference(comp.right, table_aliases_or_column_set)
 		else:
 			# 单表查询，使用column_set
@@ -200,6 +201,16 @@ class SemanticAnalyzer:
 				raise SemanticError("WHERE 类型不匹配: 期望 INT")
 			if col_type in ('TEXT', 'VARCHAR') and not isinstance(comp.right, str):
 				raise SemanticError("WHERE 类型不匹配: 期望 TEXT/VARCHAR")
+
+	def _is_column_reference(self, value: str) -> bool:
+		"""判断一个字符串是否为列引用（而不是常量）"""
+		# 如果包含点号，很可能是table.column格式的列引用
+		if '.' in value:
+			return True
+		if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
+			return False
+		# 其他情况认为是列引用
+		return False
 
 	def _check_column_reference(self, column_ref: str, table_aliases: dict) -> None:
 		"""检查列引用是否有效"""

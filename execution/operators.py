@@ -5,6 +5,12 @@ from storage.table import TableStorage
 
 
 def eval_predicate(row: Dict[str, Any], left: str, op: str, right: Any) -> bool:
+	# 提取列名（处理table.column格式）
+	left = _extract_column_name(left)
+
+	if isinstance(right, str):
+		right = _extract_column_name(right)
+
 	val = row.get(left)
 	
 	# 如果右操作数是字符串且看起来像列名，从row中获取值
@@ -68,13 +74,31 @@ class Project:
 						# 选择所有列
 						result.update(row)
 					else:
-						result[col] = row.get(col)
+						# 智能列名匹配：先尝试直接匹配，再尝试带表别名的匹配
+						value = self._get_column_value(row, col)
+						result[col] = value
 				elif isinstance(col, dict):
 					# 带别名的列 {"column": "name", "alias": "student_name"}
 					column_name = col.get('column', '')
 					alias_name = col.get('alias', column_name)
-					result[alias_name] = row.get(column_name)
+					value = self._get_column_value(row, column_name)
+					result[alias_name] = value
 			yield result
+
+	def _get_column_value(self, row: Dict[str, Any], column_name: str) -> Any:
+		"""智能获取列值，支持表别名前缀匹配"""
+		# 1. 先尝试直接匹配
+		if column_name in row:
+			return row[column_name]
+		
+		# 2. 如果直接匹配失败，尝试查找带表别名前缀的键
+		# 例如：查找 "name" 时，会匹配 "s.name" 或 "c.name"
+		for key in row.keys():
+			if key.endswith(f".{column_name}"):
+				return row[key]
+		
+		# 3. 如果都找不到，返回None
+		return None
 
 
 class Insert:
@@ -193,11 +217,13 @@ class OrderBy:
 
 
 class Join:
-	def __init__(self, left_child, right_child, join_type: str, on_condition: Dict[str, Any]):
+	def __init__(self, left_child, right_child, join_type: str, on_condition: Dict[str, Any], left_table_alias: str = None, right_table_alias: str = None):
 		self.left_child = left_child
 		self.right_child = right_child
 		self.join_type = join_type  # INNER, LEFT, RIGHT, OUTER
 		self.on_condition = on_condition
+		self.left_table_alias = left_table_alias
+		self.right_table_alias = right_table_alias
 
 	def execute(self) -> Iterable[Dict[str, Any]]:
 		# 收集右表数据
@@ -209,11 +235,42 @@ class Join:
 			for right_row in right_rows:
 				if self._matches_condition(left_row, right_row):
 					matched = True
-					yield {**left_row, **right_row}
+					# 使用表别名避免键冲突
+					merged_row = self._merge_rows_with_aliases(left_row, right_row)
+					yield merged_row
 			
 			# 左连接：即使没有匹配也要输出左表行
 			if self.join_type == 'LEFT' and not matched:
-				yield {**left_row, **{k: None for k in right_rows[0].keys() if right_rows}}
+				# 为右表列添加别名前缀，值为None
+				right_row_with_aliases = {}
+				if right_rows:
+					for key in right_rows[0].keys():
+						if self.right_table_alias:
+							right_row_with_aliases[f"{self.right_table_alias}.{key}"] = None
+						else:
+							right_row_with_aliases[key] = None
+				merged_row = self._merge_rows_with_aliases(left_row, right_row_with_aliases)
+				yield merged_row
+
+	def _merge_rows_with_aliases(self, left_row: Dict[str, Any], right_row: Dict[str, Any]) -> Dict[str, Any]:
+		"""合并行数据，使用表别名避免键冲突"""
+		merged = {}
+		
+		# 添加左表数据
+		for key, value in left_row.items():
+			if self.left_table_alias:
+				merged[f"{self.left_table_alias}.{key}"] = value
+			else:
+				merged[key] = value
+		
+		# 添加右表数据
+		for key, value in right_row.items():
+			if self.right_table_alias:
+				merged[f"{self.right_table_alias}.{key}"] = value
+			else:
+				merged[key] = value
+		
+		return merged
 
 	def _matches_condition(self, left_row: Dict[str, Any], right_row: Dict[str, Any]) -> bool:
 		"""检查连接条件是否满足"""
@@ -221,7 +278,35 @@ class Join:
 		op = self.on_condition['op']
 		right_col = self.on_condition['right']
 		
-		left_val = left_row.get(left_col)
-		right_val = right_row.get(right_col)
+		# 提取列名（处理table.column格式）
+		left_column_name = _extract_column_name(left_col)
+		right_column_name = _extract_column_name(right_col)
 		
-		return eval_predicate({left_col: left_val}, left_col, op, right_val)
+		# 从对应的行中获取值
+		left_val = left_row.get(left_column_name)
+		right_val = right_row.get(right_column_name)
+		
+		# 直接比较值
+		if op == '=':
+			return left_val == right_val
+		elif op in ('<>', '!='):
+			return left_val != right_val
+		elif op == '<':
+			return left_val < right_val
+		elif op == '>':
+			return left_val > right_val
+		elif op == '<=':
+			return left_val <= right_val
+		elif op == '>=':
+			return left_val >= right_val
+		else:
+			raise ValueError(f"不支持的比较运算符: {op}")
+	
+def _extract_column_name(column_ref: str) -> str:
+	"""从列引用中提取列名"""
+	if '.' in column_ref:
+		# 处理table.column格式，返回列名部分
+		return column_ref.split('.', 1)[1]
+	else:
+		# 简单列名，直接返回
+		return column_ref

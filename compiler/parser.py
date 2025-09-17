@@ -146,8 +146,7 @@ class Parser:
 		return self._advance()
 
 	def _consume_optional_semicolon(self) -> None:
-		if self._match(TokenType.DELIMITER, ';'):
-			pass
+		self._expect(TokenType.DELIMITER, ';')
 
 	def _statement(self):
 		if self._check(TokenType.KEYWORD, 'CREATE'):

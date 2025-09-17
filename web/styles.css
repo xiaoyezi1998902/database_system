@@ -202,23 +202,60 @@ body {
     padding: 10px;
 }
 
-#pane-rows table {
-    width: 100%;
-    border-collapse: collapse;
+/* 结果块容器样式 */
+.result-block {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--panel);
 }
 
-#pane-rows thead th {
+.result-block:last-child {
+    margin-bottom: 0;
+}
+
+/* 文本结果样式 */
+.result-block.text-result {
+    padding: 12px 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-family: monospace;
+    border-left: 4px solid #ef4444;
+    font-size: 22px;
+    /* 红色边框表示错误 */
+}
+
+/* 表格结果样式 */
+.result-block table {
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.result-block thead th {
     text-align: left;
-    padding: 8px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border);
-    background: #0c1323;
+    background: #22c55e;
+    color: #ffffff;
+    font-weight: 600;
     position: sticky;
     top: 0;
+    width: 450px;
 }
 
-#pane-rows tbody td {
-    padding: 6px 8px;
+.result-block tbody td {
+    padding: 6px 12px;
     border-bottom: 1px solid var(--border);
+    width: 450px;
+}
+
+.result-block tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.result-block tbody tr:hover td {
+    background: #374151;
 }
 
 pre {
