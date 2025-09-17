@@ -133,6 +133,8 @@ class Planner:
 			# 处理聚合函数和列别名
 			columns = []
 			aggregates = []
+			aggregate_columns = []  # 聚合函数生成的列名
+			
 			for col in stmt.columns:
 				if isinstance(col, str):
 					columns.append(col)
@@ -142,6 +144,9 @@ class Planner:
 						"column": col.column,
 						"alias": col.alias
 					})
+					# 添加聚合函数生成的列名
+					column_name = col.alias or f"{col.func_name}({col.column or '*'})"
+					aggregate_columns.append(column_name)
 				elif isinstance(col, ColumnWithAlias):
 					columns.append({
 						"column": col.column,
@@ -150,6 +155,9 @@ class Planner:
 			
 			if aggregates:
 				node = PlanNode("Aggregate", {"functions": aggregates}, [node])
+				# 如果有聚合函数，将聚合列名添加到Project中
+				columns.extend(aggregate_columns)
+			
 			if columns:
 				node = PlanNode("Project", {"columns": columns}, [node])
 		

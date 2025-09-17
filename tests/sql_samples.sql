@@ -152,5 +152,49 @@ INSERT INTO student VALUES
 SELECT * FROM student ORDER BY name;
 
 -- ===========================================
+-- 9. 聚合函数测试
+-- ===========================================
+
+-- 9.1 基础聚合函数测试
+SELECT COUNT(*) FROM student;
+
+-- 9.2 按列计数
+SELECT COUNT(class_id) FROM student;
+
+-- 9.3 求和
+SELECT SUM(age) FROM student;
+
+-- 9.4 平均值
+SELECT AVG(age) FROM student;
+
+-- 9.5 最大值
+SELECT MAX(age) FROM student;
+
+-- 9.6 最小值
+SELECT MIN(age) FROM student;
+
+-- 9.7 多个聚合函数
+SELECT COUNT(*), AVG(age), MAX(age), MIN(age) FROM student;
+
+-- 9.8 带别名的聚合函数
+SELECT COUNT(*) as total_students, AVG(age) as avg_age FROM student;
+
+-- ===========================================
+-- 10. GROUP BY 分组测试
+-- ===========================================
+
+-- 10.1 按班级分组
+SELECT class_id, COUNT(*) FROM student GROUP BY class_id;
+
+-- 10.2 按班级分组，显示平均年龄
+SELECT class_id, COUNT(*) as student_count, AVG(age) as avg_age FROM student GROUP BY class_id;
+
+-- 10.3 按年龄分组
+SELECT age, COUNT(*) as count_num FROM student GROUP BY age;
+
+-- 10.4 多列分组
+SELECT class_id, age, COUNT(*) FROM student GROUP BY class_id, age;
+
+-- ===========================================
 -- 测试完成
 -- ===========================================

@@ -27,7 +27,7 @@
     'SELECT', 'FROM', 'WHERE', 'CREATE', 'TABLE', 'INSERT', 'INTO', 'VALUES', 'DELETE',
     'UPDATE', 'SET', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON', 'ORDER', 'BY',
     'GROUP', 'HAVING', 'INT', 'TEXT', 'VARCHAR', 'AND', 'OR', 'NOT', 'NULL', 'IS',
-    'IN', 'BETWEEN', 'LIKE', 'EXISTS', 'UNION', 'DISTINCT', 'AS', 'ASC', 'DESC'
+    'IN', 'BETWEEN', 'LIKE', 'EXISTS', 'UNION', 'DISTINCT', 'AS', 'ASC', 'DESC', 'AVG', 'SUM', 'MAX', 'MIN', 'COUNT'
   ]);
 
   function setActiveTab(name) {

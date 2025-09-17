@@ -48,10 +48,18 @@
 
    ![image-20250916234447490](./assets/image-20250916234447490.png)
 
-10. 谓词下推功能，两个条件都被下推到扫描阶段，形成过滤链，逐层减少数据量。
+10. 聚合函数（COUNT，SUM，AVG，MIN，MAX）："SELECT COUNT(*), AVG(age), MAX(age), MIN(age) FROM student;"。
 
-   ![image-20250915234108451](./assets/image-20250915234108451.png)
+   ![image-20250917125849055](./assets/image-20250917125849055.png)
 
-11. 智能纠错提示。
+11. 分组功能（GROUP BY）："SELECT class_id, COUNT(*) FROM student GROUP BY class_id;"。
 
-   ![image-20250915234357779](./assets/image-20250915234357779.png)
+    ![image-20250917130058013](./assets/image-20250917130058013.png)
+
+12. 谓词下推功能，两个条件都被下推到扫描阶段，形成过滤链，逐层减少数据量。
+
+![image-20250915234108451](./assets/image-20250915234108451.png)
+
+13. 智能纠错提示。
+
+![image-20250915234357779](./assets/image-20250915234357779.png)

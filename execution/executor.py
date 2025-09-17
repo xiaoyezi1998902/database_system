@@ -1,6 +1,6 @@
 from typing import Any, Dict, Iterable, Optional, List
 
-from .operators import SeqScan, Filter, Project, Insert as OpInsert, CreateTable as OpCreateTable, Delete as OpDelete, Update as OpUpdate, OrderBy, Join
+from .operators import SeqScan, Filter, Project, Insert as OpInsert, CreateTable as OpCreateTable, Delete as OpDelete, Update as OpUpdate, OrderBy, Join, GroupBy, Aggregate
 from .system_catalog import SystemCatalog
 from storage.disk_manager import DiskManager
 from storage.buffer_manager import BufferManager
@@ -79,6 +79,12 @@ class Executor:
 			right_child = self._build_pipeline(node.children[1])
 			return Join(left_child, right_child, node.args['join_type'], node.args['on_condition'], 
 						node.args.get('left_table_alias'), node.args.get('right_table_alias'))
+		if node.name == 'GroupBy':
+			child = self._build_pipeline(node.children[0])
+			return GroupBy(child, node.args['columns'], node.args.get('having'))
+		if node.name == 'Aggregate':
+			child = self._build_pipeline(node.children[0])
+			return Aggregate(child, node.args['functions'])
 		return None
 
 	def _materialize_child(self, node) -> Iterable[Dict[str, Any]]:
